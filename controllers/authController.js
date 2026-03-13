@@ -1,25 +1,11 @@
-// controllers/authController.js
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const User = require("../models/User");
-const nodemailer = require("nodemailer");
 const sendEmail = require("../utils/sendEmail");
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const EMAIL_FROM = process.env.EMAIL_FROM || "HostelConnect <no-reply@local>";
 
-/** nodemailer transporter - configure through env */
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT || 587),
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
-
-// LOGIN with username + password
 exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -53,16 +39,20 @@ exports.login = async (req, res) => {
   }
 };
 
-// FORGOT PASSWORD: generates a temporary password, updates user, emails it
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).select("+passwordHash");
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
+
+    const tempPassword = Math.random().toString(36).slice(-8);
+
+    user.passwordHash = tempPassword;
+    await user.save();
 
     const message = `
 Hello ${user.name},
@@ -70,9 +60,8 @@ Hello ${user.name},
 Your HostelConnect account details:
 
 Username: ${user.username}
-Temporary Password: ${user.passwordHash}
+Password: ${tempPassword}
 
-Please login and change your password.
 
 HostelConnect
 `;

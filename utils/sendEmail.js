@@ -1,20 +1,21 @@
-const sgMail = require("@sendgrid/mail");
+const { Resend } = require("resend");
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 async function sendEmail(to, subject, text) {
-  const msg = {
-    to,
-    from: process.env.SENDGRID_FROM_EMAIL,
-    subject,
-    text,
-  };
-
   try {
-    await sgMail.send(msg);
-    console.log("Email sent to:", to);
+    const response = await resend.emails.send({
+      from: process.env.RESEND_FROM_EMAIL,
+      to: to,
+      subject: subject,
+      text: text,
+    });
+
+    console.log("Email sent:", response);
   } catch (err) {
-    console.error("SendGrid error:", err.response?.body || err.message);
+    console.error("Resend error:", err);
+
+    throw new Error("Email sending failed");
   }
 }
 
