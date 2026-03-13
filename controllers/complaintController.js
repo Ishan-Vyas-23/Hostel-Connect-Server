@@ -172,3 +172,18 @@ exports.updateComplaintStatus = async (req, res) => {
     res.status(500).json({ message: "Status update error" });
   }
 };
+
+exports.getMyComplaints = async (req, res) => {
+  try {
+    const complaints = await Complaint.find({
+      author: req.user.id,
+    })
+      .populate("author", "name email hostel room role")
+      .sort({ createdAt: -1 });
+
+    res.json(complaints);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error fetching your complaints" });
+  }
+};

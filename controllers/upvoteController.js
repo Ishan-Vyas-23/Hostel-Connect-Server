@@ -11,14 +11,21 @@ exports.toggleUpvote = async (req, res) => {
       complaint: complaintId,
     });
 
+    let updatedComplaint;
+
     if (existingVote) {
       await Upvote.deleteOne({ _id: existingVote._id });
 
-      await Complaint.findByIdAndUpdate(complaintId, {
-        $inc: { upvotesCount: -1 },
-      });
+      updatedComplaint = await Complaint.findByIdAndUpdate(
+        complaintId,
+        { $inc: { upvotesCount: -1 } },
+        { new: true },
+      );
 
-      return res.json({ message: "Upvote removed" });
+      return res.json({
+        message: "Upvote removed",
+        upvotes: updatedComplaint.upvotesCount,
+      });
     }
 
     await Upvote.create({
@@ -26,11 +33,16 @@ exports.toggleUpvote = async (req, res) => {
       complaint: complaintId,
     });
 
-    await Complaint.findByIdAndUpdate(complaintId, {
-      $inc: { upvotesCount: 1 },
-    });
+    updatedComplaint = await Complaint.findByIdAndUpdate(
+      complaintId,
+      { $inc: { upvotesCount: 1 } },
+      { new: true },
+    );
 
-    res.json({ message: "Complaint upvoted" });
+    res.json({
+      message: "Complaint upvoted",
+      upvotes: updatedComplaint.upvotesCount,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Upvote error" });
