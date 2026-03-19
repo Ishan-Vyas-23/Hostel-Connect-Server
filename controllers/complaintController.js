@@ -89,12 +89,13 @@ exports.updateComplaint = async (req, res) => {
       return res.status(403).json({ message: "Not authorized" });
     }
 
-    const { title, description, category } = req.body;
+    // 🔥 ONLY allow description
+    const { description } = req.body;
 
     const updatedComplaint = await Complaint.findByIdAndUpdate(
       req.params.id,
-      { title, description, category },
-      { new: true },
+      { description },
+      { returnDocument: "after" },
     );
 
     res.json(updatedComplaint);
