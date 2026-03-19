@@ -1,4 +1,3 @@
-// seedUsers.js
 const mongoose = require("mongoose");
 require("dotenv").config();
 const User = require("./models/User");
@@ -10,7 +9,6 @@ function randomNumberString(len = 4) {
 }
 
 function usernameForRole(role) {
-  // prefixes: resident -> std, staff -> stf, warden -> wdn, admin -> adm
   if (role === "resident") return `std${randomNumberString(4)}`;
   if (role === "staff") return `stf${randomNumberString(4)}`;
   if (role === "warden") return `wdn${randomNumberString(4)}`;
@@ -26,7 +24,6 @@ async function generateUniqueUsername(role) {
     if (!exists) return uname;
     tries++;
   }
-  // fallback (extremely unlikely)
   return `${usernameForRole(role)}${Date.now().toString().slice(-4)}`;
 }
 
@@ -35,7 +32,6 @@ async function seed() {
     await mongoose.connect(process.env.MONGO_URI_HOSTEL_CONNECT);
     console.log("Connected to MongoDB");
 
-    // WARNING: This removes existing users (keep backups if needed)
     await User.deleteMany({});
 
     const raw = [
@@ -139,7 +135,6 @@ async function seed() {
         role: u.role,
         year: u.year,
       };
-      // createWithPassword expects plain password as second arg
       await User.createWithPassword(userObj, u.password);
       console.log(`Created ${u.name} -> ${username}`);
     }

@@ -1,5 +1,4 @@
 const jwt = require("jsonwebtoken");
-const crypto = require("crypto");
 const User = require("../models/User");
 const sendEmail = require("../utils/sendEmail");
 
@@ -51,7 +50,8 @@ exports.forgotPassword = async (req, res) => {
 
     const tempPassword = Math.random().toString(36).slice(-8);
 
-    user.passwordHash = tempPassword;
+    await user.setPassword(tempPassword);
+
     await user.save();
 
     const message = `
@@ -60,8 +60,9 @@ Hello ${user.name},
 Your HostelConnect account details:
 
 Username: ${user.username}
-Password: ${tempPassword}
+Temporary Password: ${tempPassword}
 
+Please login and change your password.
 
 HostelConnect
 `;
@@ -72,5 +73,35 @@ HostelConnect
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Email sending failed" });
+  }
+};
+
+exports.changePassword = async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ message: "Both passwords required" });
+    }
+
+    const user = await User.findById(req.user.id).select("+passwordHash");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const isMatch = await user.verifyPassword(oldPassword);
+
+    if (!isMatch) {
+      return res.status(400).json({ message: "Old password incorrect" });
+    }
+
+    await user.setPassword(newPassword);
+    await user.save();
+
+    res.json({ message: "Password updated successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Password update failed" });
   }
 };

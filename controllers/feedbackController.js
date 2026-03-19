@@ -43,3 +43,20 @@ exports.addFeedback = async (req, res) => {
     res.status(500).json({ message: "Feedback error" });
   }
 };
+
+exports.getAllFeedbacks = async (req, res) => {
+  try {
+    const feedbacks = await Feedback.find()
+      .populate("user", "name username email role hostel room")
+      .populate(
+        "complaint",
+        "title category status severity location createdAt",
+      )
+      .sort({ createdAt: -1 });
+
+    res.json(feedbacks);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error fetching feedbacks" });
+  }
+};

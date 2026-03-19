@@ -1,5 +1,6 @@
 const Complaint = require("../models/Complaint");
 const Notification = require("../models/Notification");
+const Feedback = require("../models/Feedback");
 
 exports.createComplaint = async (req, res) => {
   try {
@@ -89,7 +90,6 @@ exports.updateComplaint = async (req, res) => {
       return res.status(403).json({ message: "Not authorized" });
     }
 
-    // 🔥 ONLY allow description
     const { description } = req.body;
 
     const updatedComplaint = await Complaint.findByIdAndUpdate(
@@ -163,7 +163,7 @@ exports.updateComplaintStatus = async (req, res) => {
     await Notification.create({
       user: complaint.author,
       title: "Complaint status updated",
-      message: `Your complaint "${complaint.title}" is now ${status}`,
+      message: `Your complaint "${complaint.title}" is now ${status} `,
       type: "complaint",
     });
 
@@ -180,9 +180,24 @@ exports.getMyComplaints = async (req, res) => {
       author: req.user.id,
     })
       .populate("author", "name email hostel room role")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
-    res.json(complaints);
+    const complaintIds = complaints.map((c) => c._id);
+
+    const feedbacks = await Feedback.find({
+      user: req.user.id,
+      complaint: { $in: complaintIds },
+    }).lean();
+
+    const feedbackMap = new Map(feedbacks.map((f) => [String(f.complaint), f]));
+
+    const result = complaints.map((c) => ({
+      ...c,
+      myFeedback: feedbackMap.get(String(c._id)) || null,
+    }));
+
+    res.json(result);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Error fetching your complaints" });
