@@ -16,7 +16,7 @@ router.get("/my", authMiddleware, complaintController.getMyComplaints);
 
 router.get("/", complaintController.getAllComplaints);
 
-router.post("/", authMiddleware, complaintController.createComplaint);
+router.post("/", authMiddleware,roleMiddleware(["student", "staff"]), complaintController.createComplaint);
 
 router.put("/:id", authMiddleware, complaintController.updateComplaint);
 

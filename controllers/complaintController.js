@@ -49,7 +49,7 @@ exports.getAllComplaints = async (req, res) => {
       };
     }
 
-    const complaints = await Complaint.find()
+    const complaints = await Complaint.find({status : {$ne: "Closed"}})
       .populate("author", "name email hostel room role")
       .sort(sortOption);
 
