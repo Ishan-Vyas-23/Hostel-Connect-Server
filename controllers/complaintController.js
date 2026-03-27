@@ -1,6 +1,7 @@
 const Complaint = require("../models/Complaint");
 const Notification = require("../models/Notification");
 const Feedback = require("../models/Feedback");
+const Upvote = require("../models/Upvote");
 
 exports.createComplaint = async (req, res) => {
   try {
@@ -34,7 +35,12 @@ exports.createComplaint = async (req, res) => {
 
 exports.getAllComplaints = async (req, res) => {
   try {
-    const { sort } = req.query;
+    const { sort, category, status } = req.query;
+
+    let filter = {};
+
+    if (category) filter.category = category;
+    if (status) filter.status = status;
 
     let sortOption = { createdAt: -1 };
 
@@ -43,17 +49,33 @@ exports.getAllComplaints = async (req, res) => {
     }
 
     if (sort === "priority") {
-      sortOption = {
-        upvotesCount: -1,
-        createdAt: -1,
-      };
+      sortOption = { upvotesCount: -1, createdAt: -1 };
     }
 
-    const complaints = await Complaint.find({status : {$ne: "Closed"}})
-      .populate("author", "name email hostel room role")
-      .sort(sortOption);
+    const userId = req.user?.id;
 
-    res.json(complaints);
+    const complaints = await Complaint.find(filter)
+      .populate("author", "name email hostel room role")
+      .sort(sortOption)
+      .lean();
+
+    let upvoteSet = new Set();
+
+    if (userId) {
+      const upvotes = await Upvote.find({
+        user: userId,
+        complaint: { $in: complaints.map((c) => c._id) },
+      });
+
+      upvoteSet = new Set(upvotes.map((u) => String(u.complaint)));
+    }
+
+    const result = complaints.map((c) => ({
+      ...c,
+      userHasUpvoted: upvoteSet.has(String(c._id)),
+    }));
+
+    res.json(result);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Error fetching complaints" });
@@ -167,6 +189,8 @@ exports.updateComplaintStatus = async (req, res) => {
       type: "complaint",
     });
 
+    await complaint.populate("author", "name email hostel room role");
+
     res.json(complaint);
   } catch (err) {
     console.error(err);
@@ -176,9 +200,14 @@ exports.updateComplaintStatus = async (req, res) => {
 
 exports.getMyComplaints = async (req, res) => {
   try {
-    const complaints = await Complaint.find({
-      author: req.user.id,
-    })
+    const { category, status } = req.query;
+
+    let filter = { author: req.user.id };
+
+    if (category) filter.category = category;
+    if (status) filter.status = status;
+
+    const complaints = await Complaint.find(filter)
       .populate("author", "name email hostel room role")
       .sort({ createdAt: -1 })
       .lean();
@@ -192,9 +221,17 @@ exports.getMyComplaints = async (req, res) => {
 
     const feedbackMap = new Map(feedbacks.map((f) => [String(f.complaint), f]));
 
+    const upvotes = await Upvote.find({
+      user: req.user.id,
+      complaint: { $in: complaintIds },
+    });
+
+    const upvoteSet = new Set(upvotes.map((u) => String(u.complaint)));
+
     const result = complaints.map((c) => ({
       ...c,
       myFeedback: feedbackMap.get(String(c._id)) || null,
+      userHasUpvoted: upvoteSet.has(String(c._id)),
     }));
 
     res.json(result);

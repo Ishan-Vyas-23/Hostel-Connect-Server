@@ -9,6 +9,7 @@ const upvoteRoutes = require("./routes/upvoteRoutes");
 const feedbackRoutes = require("./routes/feedbackRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
+const noticeRoutes = require("./routes/noticeRoutes");
 
 const cors = require("cors");
 
@@ -29,6 +30,7 @@ app.use("/api/upvotes", upvoteRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/notices", noticeRoutes);
 
 app.get("/health", (req, res) => {
   res.status(200).send("ok");

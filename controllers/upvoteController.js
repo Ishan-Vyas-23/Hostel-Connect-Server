@@ -6,23 +6,22 @@ exports.toggleUpvote = async (req, res) => {
     const userId = req.user.id;
     const complaintId = req.params.id;
 
+    const complaint = await Complaint.findById(complaintId);
+    if (!complaint) {
+      return res.status(404).json({ message: "Complaint not found" });
+    }
+
     const existingVote = await Upvote.findOne({
       user: userId,
       complaint: complaintId,
     });
 
-    let updatedComplaint;
     let upvoted;
 
     if (existingVote) {
       await Upvote.deleteOne({ _id: existingVote._id });
 
-      updatedComplaint = await Complaint.findByIdAndUpdate(
-        complaintId,
-        { $inc: { upvotesCount: -1 } },
-        { returnDocument: "after" },
-      );
-
+      complaint.upvotesCount = Math.max(0, complaint.upvotesCount - 1);
       upvoted = false;
     } else {
       await Upvote.create({
@@ -30,33 +29,28 @@ exports.toggleUpvote = async (req, res) => {
         complaint: complaintId,
       });
 
-      updatedComplaint = await Complaint.findByIdAndUpdate(
-        complaintId,
-        { $inc: { upvotesCount: 1 } },
-        { returnDocument: "after" },
-      );
-
+      complaint.upvotesCount += 1;
       upvoted = true;
     }
 
+    // ✅ SEVERITY LOGIC (clean + predictable)
     let severity = "low";
 
-    if (updatedComplaint.upvotesCount >= 6) {
+    if (complaint.upvotesCount >= 6) {
       severity = "high";
-    } else if (updatedComplaint.upvotesCount >= 3) {
+    } else if (complaint.upvotesCount >= 3) {
       severity = "medium";
     }
 
-    if (updatedComplaint.severity !== severity) {
-      updatedComplaint.severity = severity;
-      await updatedComplaint.save();
-    }
+    complaint.severity = severity;
+
+    await complaint.save();
 
     res.json({
       message: upvoted ? "Complaint upvoted" : "Upvote removed",
-      upvotes: updatedComplaint.upvotesCount,
-      upvoted: upvoted,
-      severity: updatedComplaint.severity,
+      upvotes: complaint.upvotesCount,
+      upvoted,
+      severity: complaint.severity,
     });
   } catch (err) {
     console.error(err);
