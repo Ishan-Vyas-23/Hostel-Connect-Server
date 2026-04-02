@@ -17,12 +17,19 @@ exports.getMe = async (req, res) => {
 
 exports.getAllUsers = async (req, res) => {
   try {
-    const { role, hostel } = req.query;
+    const { role, hostel, enrolmentNo } = req.query;
 
     let filter = {};
 
     if (role) filter.role = role;
     if (hostel) filter.hostel = hostel;
+
+    if (enrolmentNo) {
+      filter.enrolmentNo = {
+        $regex: enrolmentNo,
+        $options: "i",
+      };
+    }
 
     const users = await User.find(filter).select("-passwordHash");
 
